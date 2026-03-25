@@ -210,11 +210,10 @@ def handle_message(msg):
             "\"이작 법무법인에서는 코인 등 최신 유형의 형사사건을 비롯\n"
             "성범죄, 음주운전 등 기본적인 형사사건도 성공적으로 수행 합니다\""
         )
-        image_path = "/Users/limkipyo/Desktop/자료/1.JPG"
+        image_url = "https://raw.githubusercontent.com/cholawyer/telebot/main/intro.jpg"
         try:
-            with open(image_path, "rb") as img:
-                requests.post(f"{API_URL}/sendPhoto", files={"photo": img},
-                              data={"chat_id": chat_id, "caption": intro}, timeout=30)
+            requests.post(f"{API_URL}/sendPhoto",
+                          data={"chat_id": chat_id, "photo": image_url, "caption": intro}, timeout=30)
         except:
             send_message(chat_id, intro)
     elif text == "/구독취소":
