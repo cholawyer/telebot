@@ -212,13 +212,9 @@ def handle_message(msg):
         )
         image_url = "https://raw.githubusercontent.com/cholawyer/telebot/main/intro.jpg"
         try:
-            res = requests.post(f"{API_URL}/sendPhoto",
+            requests.post(f"{API_URL}/sendPhoto",
                           data={"chat_id": chat_id, "photo": image_url, "caption": intro}, timeout=30)
-            if not res.json().get("ok"):
-                print(f"[sendPhoto 실패] {res.json()}")
-                send_message(chat_id, intro)
         except Exception as e:
-            print(f"[sendPhoto 예외] {e}")
             send_message(chat_id, intro)
     elif text == "/구독취소":
         if chat_id in users["allowed"] and chat_id != ADMIN_ID:
