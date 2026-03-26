@@ -29,6 +29,7 @@ CRIME_USERS_FILE = os.path.expanduser("~/crime_bot_users.json")
 CRIME_OFFSET_FILE = os.path.expanduser("~/crime_bot_offset.json")
 CRIME_HISTORY_FILE = os.path.expanduser("~/crime_news_history.json")
 CRIME_SENT_FILE = os.path.expanduser("~/crime_bot_sent.json")
+CRIME_FIRST_URL_FILE = os.path.expanduser("~/crime_bot_first_url.json")
 CRIME_TODAY_FILE = os.path.expanduser("~/crime_bot_today.json")
 CRIME_PREDICTIONS_FILE = os.path.expanduser("~/crime_bot_predictions.json")
 CRIME_SCORE_FILE = os.path.expanduser("~/crime_bot_score.json")
@@ -65,6 +66,26 @@ def get_remaining(chat_id):
     if key not in usage or usage[key]["date"] != today:
         return DAILY_LIMIT
     return max(0, DAILY_LIMIT - usage[key]["count"])
+
+def is_first_url_today(chat_id):
+    """오늘 첫 URL 분석 여부 확인"""
+    today = datetime.now().strftime("%Y-%m-%d")
+    if os.path.exists(CRIME_FIRST_URL_FILE):
+        with open(CRIME_FIRST_URL_FILE) as f:
+            data = json.load(f)
+        return data.get(str(chat_id)) != today
+    return True
+
+def mark_first_url_today(chat_id):
+    """오늘 첫 URL 분석 기록"""
+    today = datetime.now().strftime("%Y-%m-%d")
+    data = {}
+    if os.path.exists(CRIME_FIRST_URL_FILE):
+        with open(CRIME_FIRST_URL_FILE) as f:
+            data = json.load(f)
+    data[str(chat_id)] = today
+    with open(CRIME_FIRST_URL_FILE, "w") as f:
+        json.dump(data, f)
 # 판결 완료 기사 제외 키워드 (이미 결론 난 사건)
 VERDICT_EXCLUDE = ["선고", "무죄", "유죄", "실형", "집행유예", "파기환송", "확정판결", "대법원 확정"]
 
@@ -797,6 +818,28 @@ def analyze_url(chat_id, url):
     if not prob_line:
         send_message(chat_id, "⚠️ 형사사건 키워드를 찾지 못했어요.\n분석 가능한 형사사건 기사 URL을 보내주세요.")
         return
+
+    # 오늘 첫 URL 분석 시 명함+소개글 먼저 전송
+    if is_first_url_today(chat_id):
+        mark_first_url_today(chat_id)
+        intro = (
+            "안녕하세요! ⚖️\n\n"
+            "🤖 AI판사 봇 입니다.\n\n"
+            "🔗 이슈가 되는 형사사건의 네이버 웹주소를 넣으면 판결 예측해 드립니다.\n"
+            "   (클로드+제미나이) 유죄확률 + 예상형량을 전송합니다. (하루 최대 5건)\n\n"
+            "랜딩페이지 : https://cholawyer.github.io/divine-justice/\n\n"
+            "📩 대면 상담문의(유료) : chojh208@gmail.com\n\n"
+            "\"이작 법무법인에서는 코인 등 최신 유형의 형사사건을 비롯\n"
+            "성범죄, 음주운전 등 기본적인 형사사건도 성공적으로 수행 합니다\""
+        )
+        image_url = "https://raw.githubusercontent.com/cholawyer/telebot/main/intro.jpg"
+        try:
+            requests.post(f"{API_URL}/sendPhoto",
+                          data={"chat_id": chat_id, "photo": image_url, "caption": intro}, timeout=30)
+        except Exception:
+            send_message(chat_id, intro)
+        time.sleep(0.5)
+
     msg = f"⚖️ {title}\n🔗 {url}\n\n{prob_line}\n{sentence_line}"
     send_message(chat_id, msg)
 
@@ -898,4 +941,5 @@ def send_crime_update(slot=None):
 
 
 if __name__ == "__main__":
-    send_crime_update()
+    print("AI판사봇 시작 - URL 분석 대기 중")
+    poll_messages()

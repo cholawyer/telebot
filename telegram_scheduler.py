@@ -20,15 +20,6 @@ def _load_env():
                     os.environ.setdefault(k.strip(), v.strip())
 _load_env()
 
-# 형사사건 봇 임포트
-import sys
-sys.path.insert(0, os.path.expanduser("~"))
-try:
-    from crime_news_bot import send_crime_update, poll_messages as crime_poll, crime_already_sent
-    CRIME_BOT_ENABLED = True
-except ImportError:
-    CRIME_BOT_ENABLED = False
-    print("crime_news_bot.py 없음 - 형사사건 봇 비활성화")
 
 BOT_TOKEN = os.environ.get("SCHEDULER_BOT_TOKEN", "")
 ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))
@@ -87,31 +78,6 @@ def broadcast(text):
     for uid in load_users()["allowed"]:
         send_message(uid, text)
 
-CHOILAWYER_TOKEN = os.environ.get("CHOILAWYER_TOKEN", "")
-CHOILAWYER_API = f"https://api.telegram.org/bot{CHOILAWYER_TOKEN}"
-
-def send_intro_message():
-    """매일 6:59 @choilawyer_bot 인트로 메시지 전송"""
-    text = (
-        "안녕하세요! ⚖️\n\n"
-        "🤖 AI판사 봇 입니다.\n\n"
-        "📅 매일 07:00, 20:00에 이슈 형사사건과\n"
-        "데이터 기반 유죄확률 + 예상형량을 전송합니다.\n\n"
-        "🔗 이슈가 되는 웹주소를 넣으면 판결 예측해 드립니다. (하루 최대 5건)\n\n"
-        "📩 상담문의(유료) : chojh208@gmail.com\n\n"
-        "\"저희 법무법인에서는 코인 등 최신 유형의 형사사건을 비롯하여\n"
-        "성범죄, 음주운전 등 기본적인 형사사건도 성공적으로 수행하고 있습니다.\""
-    )
-    image_path = os.path.expanduser("~/intro.jpg")
-    try:
-        from crime_news_bot import load_crime_users
-        users = load_crime_users()
-        for uid in users["allowed"]:
-            with open(image_path, "rb") as img:
-                requests.post(f"{CHOILAWYER_API}/sendPhoto", files={"photo": img},
-                              data={"chat_id": uid, "caption": text}, timeout=30)
-    except Exception as e:
-        print(f"인트로 메시지 오류: {e}")
 
 # ── 일정 파싱 ────────────────────────────────────────────────
 
@@ -271,7 +237,8 @@ def get_weather():
             "&current=temperature_2m,apparent_temperature,weathercode,relativehumidity_2m"
             "&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weathercode"
             "&timezone=Asia/Seoul&forecast_days=2",
-            timeout=10
+            timeout=10,
+            verify=False
         )
         data = res.json()
         cur = data["current"]
@@ -735,27 +702,6 @@ if __name__ == "__main__":
 
     schedule.every().day.at("00:00").do(cleanup_past_schedules)
     schedule.every().day.at("06:00").do(check_reminders)
-    schedule.every().day.at("06:59").do(send_intro_message)
-
-    # 형사사건 뉴스 분석 봇 (7시, 20시)
-    if CRIME_BOT_ENABLED:
-        # 시작 시 미전송 체크 → 즉시 실행
-        if now.hour >= 7 and not crime_already_sent("morning"):
-            print("형사봇 아침(7시) 미전송 - 즉시 실행")
-            threading.Thread(target=lambda: send_crime_update("morning"), daemon=True).start()
-        if now.hour >= 20 and not crime_already_sent("evening"):
-            print("형사봇 저녁(20시) 미전송 - 즉시 실행")
-            threading.Thread(target=lambda: send_crime_update("evening"), daemon=True).start()
-
-        schedule.every().day.at("07:00").do(
-            lambda: threading.Thread(target=lambda: send_crime_update("morning"), daemon=True).start()
-        )
-        schedule.every().day.at("20:00").do(
-            lambda: threading.Thread(target=lambda: send_crime_update("evening"), daemon=True).start()
-        )
-        # @Choilawyer_bot 폴링 (별도 스레드)
-        threading.Thread(target=crime_poll, daemon=True).start()
-        print("형사사건 봇 스케줄 등록: 07:00, 20:00 | @Choilawyer_bot 폴링 시작")
 
     t = threading.Thread(target=lambda: [time.sleep(30) or schedule.run_pending() for _ in iter(int, 1)], daemon=True)
     t.start()
