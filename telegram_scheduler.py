@@ -671,10 +671,10 @@ def poll_messages():
         print(f"이전 offset에서 재개: {offset}")
     while True:
         try:
-            params = {"timeout": 10, "allowed_updates": ["message", "callback_query", "channel_post"]}
+            params = {"timeout": 3, "allowed_updates": ["message", "callback_query", "channel_post"]}
             if offset:
                 params["offset"] = offset
-            res = requests.get(f"{API_URL}/getUpdates", params=params, timeout=15)
+            res = requests.get(f"{API_URL}/getUpdates", params=params, timeout=8)
             updates = res.json().get("result", [])
             for update in updates:
                 offset = update["update_id"] + 1
