@@ -3,6 +3,14 @@ import json
 import os
 import re
 import time
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# 오라클 서버 SSL 인증서 이슈 우회
+_s = requests.Session()
+_s.verify = False
+requests.get = _s.get
+requests.post = _s.post
 import schedule
 import threading
 import calendar
