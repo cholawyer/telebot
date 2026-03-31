@@ -1,10 +1,22 @@
 import requests
 import json
+import os
 
-GEMINI_API_KEY = "AIzaSyDcrsDsXuL2NphD7hgGzopG893LKkFC6rc"
+def _load_env():
+    env_path = os.path.expanduser("~/.env")
+    if os.path.exists(env_path):
+        with open(env_path) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    k, v = line.split('=', 1)
+                    os.environ.setdefault(k.strip(), v.strip())
+_load_env()
+
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
 
-BOT_TOKEN = "8769818135:AAF5k5vv5F-IaxVg9Y6l925TL910YHn5hYM"
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 CHAT_ID = 508862099
 API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
 MAX_LEN = 4000
